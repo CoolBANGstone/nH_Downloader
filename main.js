@@ -77,35 +77,28 @@ async function download_photo(uri, filename, callback, cnt) {
     if (cnt > 0)
         console.log('\n' + filename + '   Error: ' + cnt);
 
-    request(uri + 'jpg').on('error', function(err) {
-        console.log(err);
-        download_photo(uri, filename, callback, cnt + 1);
-        return;
-    }).on('response', function(resp) {
-        if (resp.statusCode === 200)
-            request({uri: uri + 'jpg', host: 'i.nhentai.net'}).on('error', function(err) {
+    request.head({url: uri + 'jpg'}, function(err, resp, body) {
+        if (!err && resp.statusCode === 200)
+            request({url: uri + 'jpg'}).on('error', function(err) {
                 console.log(err);
                 download_photo(uri, filename, callback, cnt + 1);
                 return;
             }).pipe(fs.createWriteStream(filename + 'jpg')).on('close', callback);
         else
-            request({uri: uri + 'png', host: 'i.nhentai.net'}).on('error', function(err) {
-                console.log(err);
-                download_photo(uri, filename, callback, cnt + 1);
-                return;
-            }).on('response', function(resp) {
-                if (resp.statusCode !== 200) {
-                    download_photo(uri, filename, callback, cnt + 1);
-                    return;
-                }
-                else
-                    request(uri + 'png').on('error', function(err) {
+            request.head({url: uri + 'png'}, function(err, resp, body) {
+                if (!err && resp.statusCode === 200) {
+                    request({url: uri + 'png'}).on('error', function(err) {
                         console.log(err);
                         download_photo(uri, filename, callback, cnt + 1);
                         return;
                     }).pipe(fs.createWriteStream(filename + 'png')).on('close', callback);
+                }else {
+                    console.log(err);
+                    download_photo(uri, filename, callback, cnt + 1);
+                    return;
+                }
             });
-     })
+     });
 }
 function run(cnt, uri, val, dir) {
     const wait = function () {
@@ -232,7 +225,6 @@ async function login(username, pass) {
 async function select_page(pages, headers) {
     var input;
     console.log('Total pages: '.white + colors.red(String(pages)));
-    // })();
     const query = function(str) {
         return new Promise((resolve, reject) => {
             rl.question(str, async function(input) {
